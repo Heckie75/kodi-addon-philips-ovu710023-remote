@@ -1,6 +1,6 @@
-#!/usr/bin/python3
 import re
 import threading
+import time
 import subprocess
 import xbmc
 
@@ -68,7 +68,7 @@ INPUTS = {
 # - Teletext: red, green, yellow, blue, ?
 
 ACTIONS = {
-    "KEY_ESC": "ActivateWindow(Home)",
+    "KEY_ESC": "Action(OSD)",
     "KEY_ENTER": "Action(Select)",
     "KEY_UP": "Action(Up)",
     "KEY_LEFT": "Action(Left)",
@@ -112,6 +112,7 @@ class Listener(xbmc.Monitor):
     _philips_input_devices = None
     _req_id = 0
     _listeners = None
+    _last_action_ts = 0
 
     def __init__(self):
 
@@ -136,6 +137,17 @@ class Listener(xbmc.Monitor):
             xbmc.log("[Philips remote] listener %i terminated." %
                      (i), xbmc.LOGNOTICE)
 
+    def kill(self):
+
+        ps = subprocess.Popen(["ps", "-eo", "pid,args"],
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = ps.communicate()
+        for line in stdout.splitlines():
+            pid, cmdline = line.split(" ", 1)
+            if cmdline.startswith("evtest"):
+                xbmc.log(
+                    "[Philips remote] still running process with PID %i found" % pid, xbmc.LOGERROR)
+
     def _evtest_find_devices(self):
 
         p1 = subprocess.Popen(["echo", "-e", "\n"], stdout=subprocess.PIPE)
@@ -151,7 +163,7 @@ class Listener(xbmc.Monitor):
             m = re.search(r"(/dev/input/event[0-9]+).*(PHILIPS OVU.+)", line)
             if m:
                 devices[m.group(2)] = m.group(1)
-                xbmc.log("[Philips remote] found %s in %s" %
+                xbmc.log("[Philips remote] found %s at %s" %
                          (m.group(2), m.group(1)), xbmc.LOGNOTICE)
 
         return devices
@@ -161,8 +173,9 @@ class Listener(xbmc.Monitor):
         if input_dev_name in self._philips_input_devices:
             path = self._philips_input_devices[input_dev_name]
             l = threading.Thread(target=self._listen, args=(path,))
+            l.daemon = True
             l.start()
-            xbmc.log("[Philips remote] started listener for %s on %s" %
+            xbmc.log("[Philips remote] started listener for %s at %s" %
                      (input_dev_name, path), xbmc.LOGNOTICE)
             return l
         else:
@@ -219,12 +232,34 @@ class Listener(xbmc.Monitor):
                     if found_event:
                         xbmc.log("[Philips remote] complex key event detected: %s" %
                                  found_event, xbmc.LOGDEBUG)
-                        xbmc.executebuiltin(ACTIONS[found_event])
+                        self._perform_action_by_keycode(found_event)
                     sequence = None
                 elif event["state"] in [KEY_STATE_DOWN, KEY_STATE_HOLD] and sequence is None:
                     xbmc.log("[Philips remote] simple key event detected: %s" %
                              event["key_code"], xbmc.LOGDEBUG)
-                    xbmc.executebuiltin(ACTIONS[event["key_code"]])
+                    self._perform_action_by_keycode(event["key_code"])
+
+    def _perform_action_by_keycode(self, key_code):
+
+        if self._is_display_on():
+            xbmc.executebuiltin(ACTIONS[key_code])
+
+    def _is_display_on(self):
+
+        current_time = time.time()
+        if self._last_action_ts + 299 > current_time:
+            return True
+
+        ps = subprocess.Popen(
+            ["xset", "-q"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout = ps.communicate()
+        if re.search(r"Monitor is in Suspend", stdout):
+            xbmc.log("[Philips remote] turn monitor on", xbmc.LOGNOTICE)
+            subprocess.call(["xset", "dpms", "force", "on"])
+            self._last_action_ts = current_time
+            return False
+        else:
+            return True
 
 
 if __name__ == "__main__":
@@ -238,4 +273,6 @@ if __name__ == "__main__":
 
     xbmc.log("[Philips remote] stopping service", xbmc.LOGNOTICE)
     listener.terminate()
+    time.sleep(1)
+    listener.kill()
     xbmc.log("[Philips remote] Service stopped.", xbmc.LOGNOTICE)
