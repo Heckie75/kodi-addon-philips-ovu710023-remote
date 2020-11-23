@@ -1,7 +1,7 @@
 # kodi-addon-philips-ovu710023-remote
 Kodi addon in order to use ZOTAC Remote Control Kit (Philips OVU710023)
 
-This is a Kodi addon which allows usage of the Philips OVU710023 remote control. It is especially known as the Zotac Remote Control Kit.
+This is a Kodi addon which allows usage of the Philips OVU710023 remote control. It is especially known as the Zotac Remote Control Kit, see [offer by Mindfactory](https://www.mindfactory.de/product_info.php/Zotac-Remote-Control-Kit-USB-IR-receiver_956848.html)
 
 This remote control does not work very well out of the box in Linux. It differs from other IR receivers because it emulates several input devices, i.e. a keyboard with media controls and power buttons. Some buttons work out of the box since they are simply mapped to standard keys. But there are several buttons that don't work. These are the numeric keys, asterisk key and hash key. Although the media control buttons, like _play_ or _pause_, work from scratch from operation system's point of view, I also mapped these to the commands that are expected in Kodi so that no additionally setup is required.
 

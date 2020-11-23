@@ -20,7 +20,7 @@
 		<news></news>
 		<assets>
 			<icon>icon.png</icon>
-			<screenshot>resources/assets/screen1.png</screenshot>
+			<screenshot>resources/assets/remote.png</screenshot>
 		</assets>
 	</extension>
 </addon>
