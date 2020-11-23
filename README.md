@@ -127,3 +127,13 @@ And if required you can kill these proceses like this:
 ```
 $ pkill evtest
 ```
+
+## Limitations
+
+I have decided how to map the remote buttons. If you take a look at source code you should be able to map buttons in a different way.
+
+Nevertheless, there are 6 buttons that don't at all. I have tested this by using Linux Kernel 5.4.
+
+The following buttons don't work:
+* Teletext buttons: red, green, yellow, blue and ?-button
+* Windows MCE button: the green one with Windows logo inside
