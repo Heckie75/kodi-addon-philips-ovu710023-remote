@@ -156,7 +156,7 @@ class Listener(xbmc.Monitor):
         p1.stdout.close()
         out, err = p2.communicate()
 
-        xbmc.log(err, xbmc.LOGNOTICE)
+        xbmc.log(err, xbmc.LOGDEBUG)
 
         devices = {}
         for line in err.decode("utf-8").split("\n"):
@@ -252,11 +252,12 @@ class Listener(xbmc.Monitor):
 
         ps = subprocess.Popen(
             ["xset", "-q"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout = ps.communicate()
-        if re.search(r"Monitor is in Suspend", stdout):
+        stdout, stderr = ps.communicate()
+        xbmc.log(stdout, xbmc.LOGNOTICE)
+        self._last_action_ts = current_time
+        if not re.search("Monitor is On", stdout):
             xbmc.log("[Philips remote] turn monitor on", xbmc.LOGNOTICE)
             subprocess.call(["xset", "dpms", "force", "on"])
-            self._last_action_ts = current_time
             return False
         else:
             return True
