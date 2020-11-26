@@ -111,7 +111,6 @@ ACTIONS = {
 
 class Listener(xbmc.Monitor):
 
-    _philips_input_devices = None
     _listeners = None
     _last_action_ts = 0
 
@@ -119,35 +118,7 @@ class Listener(xbmc.Monitor):
 
         xbmc.Monitor.__init__(self)
 
-        self._philips_input_devices = self._evtest_find_devices()
         self._listeners = []
-
-    def start(self):
-
-        for _input in INPUTS:
-            self._start(_input)
-
-    def terminate(self):
-
-        i = 0
-        for l in self._listeners:
-            i += 1
-            xbmc.log("[Philips remote] terminating listener %i of %i ..." %
-                     (i, len(self._listeners)), xbmc.LOGNOTICE)
-            l.kill()
-            xbmc.log("[Philips remote] listener %i terminated." %
-                     (i), xbmc.LOGNOTICE)
-
-    def kill(self):
-
-        ps = subprocess.Popen(["ps", "-eo", "pid,args"],
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = ps.communicate()
-        for line in stdout.splitlines():
-            pid, cmdline = line.split(" ", 1)
-            if cmdline.startswith("evtest"):
-                xbmc.log(
-                    "[Philips remote] still running process with PID %i found" % pid, xbmc.LOGERROR)
 
     def _evtest_find_devices(self):
 
@@ -157,34 +128,47 @@ class Listener(xbmc.Monitor):
         p1.stdout.close()
         out, err = p2.communicate()
 
-        xbmc.log(err, xbmc.LOGDEBUG)
-
         devices = {}
         for line in err.decode("utf-8").split("\n"):
-            m = re.search(r"(/dev/input/event[0-9]+).*(PHILIPS OVU.+)", line)
+            m = re.search(r"(/dev/input/event[0-9]+):\s+(.+)", line)
             if m:
                 devices[m.group(2)] = m.group(1)
-                xbmc.log("[Philips remote] found %s at %s" %
-                         (m.group(2), m.group(1)), xbmc.LOGNOTICE)
 
         return devices
 
-    def _start(self, input_dev_name):
+    def start(self):
 
-        if input_dev_name in self._philips_input_devices:
-            path = self._philips_input_devices[input_dev_name]
-            l = threading.Thread(target=self._listen, args=(path,))
-            l.daemon = True
-            l.start()
-            xbmc.log("[Philips remote] started listener for %s at %s" %
-                     (input_dev_name, path), xbmc.LOGNOTICE)
-            return l
-        else:
-            xbmc.log("[Philips remote] %s device not found and not started" %
-                     input_dev_name, xbmc.LOGERROR)
-            return None
+        def _has_listener(_i):
+            for _l in self._listeners:
+                if _l["name"] == _i:
+                    return True
+            return False
 
-    def _listen(self, path):
+        _input_devices = self._evtest_find_devices()
+        for _input in INPUTS:
+            if _input in _input_devices and not _has_listener(_input):
+                self._start(_input, _input_devices[_input])
+                time.sleep(0.2)
+
+    def _start(self, input_name, path):
+
+        listener = {
+            "name": input_name,
+            "path": path
+        }
+
+        _l = threading.Thread(target=self._listen, args=(listener,))
+        _l.daemon = True
+        _l.start()
+
+        xbmc.log("[Philips remote] start listener for %s at %s" %
+                 (listener["name"], listener["path"]), xbmc.LOGNOTICE)
+
+        self._listeners.append(listener)
+
+        return listener
+
+    def _listen(self, listener):
 
         def _parse_event(line):
 
@@ -200,20 +184,21 @@ class Listener(xbmc.Monitor):
             } if m else None
 
         proc = subprocess.Popen(
-            ["evtest", "--grab", path], stdout=subprocess.PIPE)
-        self._listeners.append(proc)
+            ["evtest", "--grab", listener["path"]], stdout=subprocess.PIPE)
+
+        listener["subprocess"] = proc
+
+        xbmc.log("[Philips remote] listener for %s at %s starts listening..." %
+                 (listener["name"], listener["path"]), xbmc.LOGDEBUG)
 
         sequence, modifiers = [], 0
         for line in iter(proc.stdout.readline, ""):
 
             event = _parse_event(line)
 
-            if self.abortRequested():
-                break
-
             if event:
-                xbmc.log("[Philips remote] incoming raw event: %s, %s" %
-                         (event["key_state"], event["key_code"]), xbmc.LOGDEBUG)
+                xbmc.log("[Philips remote] incoming raw event at %s (%s): %s, %s" %
+                         (listener["name"], listener["path"], event["key_state"], event["key_code"]), xbmc.LOGDEBUG)
 
                 if event["key_code"] in MODIFIER_KEYS:
                     if event["state"] == KEY_STATE_DOWN:
@@ -228,6 +213,12 @@ class Listener(xbmc.Monitor):
 
                 if modifiers <= 0 and self._apply_sequence(sequence):
                     sequence, modifiers = [], 0
+
+        proc.stdout.close()
+        proc.kill()
+
+        xbmc.log("[Philips remote] listener for %s at %s shutted down" %
+                 (listener["name"], listener["path"]), xbmc.LOGNOTICE)
 
     def _apply_sequence(self, sequence):
 
@@ -262,7 +253,6 @@ class Listener(xbmc.Monitor):
         ps = subprocess.Popen(
             ["xset", "-q"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = ps.communicate()
-        xbmc.log(stdout, xbmc.LOGDEBUG)
         self._last_action_ts = current_time
         if not re.search("Monitor is On", stdout):
             xbmc.log("[Philips remote] turn monitor on", xbmc.LOGNOTICE)
@@ -270,6 +260,11 @@ class Listener(xbmc.Monitor):
             return False
         else:
             return True
+
+    def clean(self):
+
+        for l in self._listeners:
+            l["subprocess"].kill()
 
 
 if __name__ == "__main__":
@@ -279,10 +274,8 @@ if __name__ == "__main__":
 
     while not listener.abortRequested():
         if listener.waitForAbort(10):
-            break
+            pass
 
     xbmc.log("[Philips remote] stopping service", xbmc.LOGNOTICE)
-    listener.terminate()
-    time.sleep(1)
-    listener.kill()
+    listener.clean()
     xbmc.log("[Philips remote] Service stopped.", xbmc.LOGNOTICE)
