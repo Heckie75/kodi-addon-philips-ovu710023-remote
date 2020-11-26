@@ -15,8 +15,14 @@ KEY_STATE_UP = 0
 KEY_STATE_DOWN = 1
 KEY_STATE_HOLD = 2
 
-KEY_LEFTSHIFT = 42
-KEY_LEFTALT = 56
+MODIFIER_KEYS = {
+    "KEY_LEFTCTRL": 29,
+    "KEY_LEFTALT": 56,
+    "KEY_LEFTSHIFT": 42,
+    "KEY_RIGHTSHIFT": 54,
+    "KEY_RIGHTCTRL": 97,
+    "KEY_RIGHTALT": 100
+}
 
 INPUTS = {
     PHILIPS_OVU710023_KEYBOARD: {
@@ -26,18 +32,18 @@ INPUTS = {
         "KEY_LEFT": [105],
         "KEY_RIGHT": [106],
         "KEY_DOWN": [108],
-        "PHILIPS_OVU710023_KEY_0": [75, 72],
-        "PHILIPS_OVU710023_KEY_1": [75, 73],
-        "PHILIPS_OVU710023_KEY_2": [76, 82],
-        "PHILIPS_OVU710023_KEY_3": [76, 79],
-        "PHILIPS_OVU710023_KEY_4": [76, 80],
-        "PHILIPS_OVU710023_KEY_5": [76, 81],
-        "PHILIPS_OVU710023_KEY_6": [76, 75],
-        "PHILIPS_OVU710023_KEY_7": [76, 76],
-        "PHILIPS_OVU710023_KEY_8": [76, 77],
-        "PHILIPS_OVU710023_KEY_9": [76, 71],
-        "PHILIPS_OVU710023_KEY_HASH": [81, 76],
-        "PHILIPS_OVU710023_KEY_ASTERISK": [9]
+        "PHILIPS_OVU710023_KEY_0": [56, 75, 72],
+        "PHILIPS_OVU710023_KEY_1": [56, 75, 73],
+        "PHILIPS_OVU710023_KEY_2": [56, 76, 82],
+        "PHILIPS_OVU710023_KEY_3": [56, 76, 79],
+        "PHILIPS_OVU710023_KEY_4": [56, 76, 80],
+        "PHILIPS_OVU710023_KEY_5": [56, 76, 81],
+        "PHILIPS_OVU710023_KEY_6": [56, 76, 75],
+        "PHILIPS_OVU710023_KEY_7": [56, 76, 76],
+        "PHILIPS_OVU710023_KEY_8": [56, 76, 77],
+        "PHILIPS_OVU710023_KEY_9": [56, 76, 71],
+        "PHILIPS_OVU710023_KEY_HASH": [56, 81, 76],
+        "PHILIPS_OVU710023_KEY_ASTERISK": [42, 9]
     },
     PHILIPS_OVU710023_SYSTEM_CONTROL: {
         "KEY_SLEEP": [142],
@@ -62,10 +68,6 @@ INPUTS = {
         "KEY_CHANNELDOWN": [403]
     }
 }
-
-# missing keys are:
-# - Windows MCE
-# - Teletext: red, green, yellow, blue, ?
 
 ACTIONS = {
     "KEY_ESC": "Action(OSD)",
@@ -110,7 +112,6 @@ ACTIONS = {
 class Listener(xbmc.Monitor):
 
     _philips_input_devices = None
-    _req_id = 0
     _listeners = None
     _last_action_ts = 0
 
@@ -185,20 +186,12 @@ class Listener(xbmc.Monitor):
 
     def _listen(self, path):
 
-        def _match_event(known_events, sequence):
-
-            for known_event in known_events:
-                if known_events[known_event] == sequence:
-                    return known_event
-
-            return None
-
         def _parse_event(line):
 
             xbmc.log(line, xbmc.LOGDEBUG)
 
             m = re.search(
-                r"type 1 \(EV_KEY\), code ([0-9]+) \(([^\)]+)\), value ([012]+)", line)
+                r"type 1 \(EV_KEY\), code ([0-9]+) \(([^\)]+)\), value ([012])", line)
             return {
                 "state": int(m.group(3)),
                 "key_state": ("UP", "DOWN", "HOLD")[int(m.group(3))],
@@ -210,7 +203,7 @@ class Listener(xbmc.Monitor):
             ["evtest", "--grab", path], stdout=subprocess.PIPE)
         self._listeners.append(proc)
 
-        sequence = None
+        sequence, modifiers = [], 0
         for line in iter(proc.stdout.readline, ""):
 
             event = _parse_event(line)
@@ -222,27 +215,43 @@ class Listener(xbmc.Monitor):
                 xbmc.log("[Philips remote] incoming raw event: %s, %s" %
                          (event["key_state"], event["key_code"]), xbmc.LOGDEBUG)
 
-                if event["state"] == KEY_STATE_DOWN and event["scan_code"] in [KEY_LEFTALT, KEY_LEFTSHIFT]:
-                    sequence = []
-                elif event["state"] == KEY_STATE_DOWN and sequence is not None:
+                if event["key_code"] in MODIFIER_KEYS:
+                    if event["state"] == KEY_STATE_DOWN:
+                        modifiers += 1
+                    elif event["state"] == KEY_STATE_UP:
+                        modifiers -= 1
+
+                if event["state"] == KEY_STATE_DOWN:
                     sequence.append(event["scan_code"])
-                elif event["state"] == KEY_STATE_UP and event["scan_code"] in [KEY_LEFTALT, KEY_LEFTSHIFT]:
-                    found_event = _match_event(
-                        INPUTS[PHILIPS_OVU710023_KEYBOARD], sequence)
-                    if found_event:
-                        xbmc.log("[Philips remote] complex key event detected: %s" %
-                                 found_event, xbmc.LOGDEBUG)
-                        self._perform_action_by_keycode(found_event)
-                    sequence = None
-                elif event["state"] in [KEY_STATE_DOWN, KEY_STATE_HOLD] and sequence is None:
-                    xbmc.log("[Philips remote] simple key event detected: %s" %
-                             event["key_code"], xbmc.LOGDEBUG)
-                    self._perform_action_by_keycode(event["key_code"])
+                elif event["state"] == KEY_STATE_HOLD:
+                    self._apply_sequence([event["scan_code"]])
 
-    def _perform_action_by_keycode(self, key_code):
+                if modifiers <= 0 and self._apply_sequence(sequence):
+                    sequence, modifiers = [], 0
 
-        if self._is_display_on():
-            xbmc.executebuiltin(ACTIONS[key_code])
+    def _apply_sequence(self, sequence):
+
+        def _match_event(sequence):
+
+            if sequence == []:
+                return None
+
+            for known_inputs in INPUTS:
+                for known_event in INPUTS[known_inputs]:
+                    if INPUTS[known_inputs][known_event] == sequence:
+                        return known_event
+
+            return None
+
+        found_event = _match_event(sequence)
+        if found_event:
+            xbmc.log("[Philips remote] event found: %s" %
+                     found_event, xbmc.LOGDEBUG)
+            if self._is_display_on():
+                xbmc.executebuiltin(ACTIONS[found_event])
+            return True
+
+        return False
 
     def _is_display_on(self):
 
@@ -253,7 +262,7 @@ class Listener(xbmc.Monitor):
         ps = subprocess.Popen(
             ["xset", "-q"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = ps.communicate()
-        xbmc.log(stdout, xbmc.LOGNOTICE)
+        xbmc.log(stdout, xbmc.LOGDEBUG)
         self._last_action_ts = current_time
         if not re.search("Monitor is On", stdout):
             xbmc.log("[Philips remote] turn monitor on", xbmc.LOGNOTICE)
