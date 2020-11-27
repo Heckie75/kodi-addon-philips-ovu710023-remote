@@ -95,9 +95,9 @@ You can download the addon as archive [script.service.philips-ovu710023-remote.z
 
 After you have installed this addon you MUST restart Kodi since it starts as a service when Kodi starts.
 
-I haven't optimized this addon yet. That's why it is also required to plugin the device _before_ you start Kodi!
+I have  optimized this addon, so that it detects if you plugin the device while Kodi is running. 
 
-You can check Kodi's logs if everything works fine. It should look like this:
+After you have plugged in and started Kodi you can check Kodi's logs if everything works fine. It should look like this:
 ```
 2020-11-23 17:33:30.657 T:140689580984064  NOTICE: [Philips remote] Service started
 2020-11-23 17:33:31.772 T:140689580984064  NOTICE: [Philips remote] found PHILIPS OVU710023 Keyboard at /dev/input/event17

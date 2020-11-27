@@ -1,0 +1,247 @@
+{
+    "PHILIPS OVU710023 Keyboard": {
+        "KEY_ESC": {
+            "seq": [
+                1
+            ],
+            "action": "Action(OSD)"
+        },
+        "KEY_ENTER": {
+            "seq": [
+                28
+            ],
+            "action": "Action(Select)"
+        },
+        "KEY_UP": {
+            "seq": [
+                103
+            ],
+            "action": "Action(Up)"
+        },
+        "KEY_LEFT": {
+            "seq": [
+                105
+            ],
+            "action": "Action(Left)"
+        },
+        "KEY_RIGHT": {
+            "seq": [
+                106
+            ],
+            "action": "Action(Right)"
+        },
+        "KEY_DOWN": {
+            "seq": [
+                108
+            ],
+            "action": "Action(Down)"
+        },
+        "KEY_NUMERIC_0": {
+            "seq": [
+                56,
+                75,
+                72
+            ],
+            "action": "Action(Number0)"
+        },
+        "KEY_NUMERIC_1": {
+            "seq": [
+                56,
+                75,
+                73
+            ],
+            "action": "Action(Number1)"
+        },
+        "KEY_NUMERIC_2": {
+            "seq": [
+                56,
+                76,
+                82
+            ],
+            "action": "Action(Number2)"
+        },
+        "KEY_NUMERIC_3": {
+            "seq": [
+                56,
+                76,
+                79
+            ],
+            "action": "Action(Number3)"
+        },
+        "KEY_NUMERIC_4": {
+            "seq": [
+                56,
+                76,
+                80
+            ],
+            "action": "Action(Number4)"
+        },
+        "KEY_NUMERIC_5": {
+            "seq": [
+                56,
+                76,
+                81
+            ],
+            "action": "Action(Number5)"
+        },
+        "KEY_NUMERIC_6": {
+            "seq": [
+                56,
+                76,
+                75
+            ],
+            "action": "Action(Number6)"
+        },
+        "KEY_NUMERIC_7": {
+            "seq": [
+                56,
+                76,
+                76
+            ],
+            "action": "Action(Number7)"
+        },
+        "KEY_NUMERIC_8": {
+            "seq": [
+                56,
+                76,
+                77
+            ],
+            "action": "Action(Number8)"
+        },
+        "KEY_NUMERIC_9": {
+            "seq": [
+                56,
+                76,
+                71
+            ],
+            "action": "Action(Number9)"
+        },
+        "KEY_NUMERIC_POUND": {
+            "seq": [
+                56,
+                81,
+                76
+            ],
+            "action": "Action(ContextMenu)"
+        },
+        "KEY_NUMERIC_STAR": {
+            "seq": [
+                42,
+                9
+            ],
+            "action": "Action(Menu)"
+        }
+    },
+    "PHILIPS OVU710023 System Control": {
+        "KEY_SLEEP": {
+            "seq": [
+                142
+            ],
+            "action": "ActivateWindow(ShutdownMenu)"
+        },
+        "KEY_WAKEUP": {
+            "seq": [
+                143
+            ],
+            "action": "Action(togglefullscreen)"
+        }
+    },
+    "PHILIPS OVU710023 Consumer Control": {
+        "KEY_MUTE": {
+            "seq": [
+                113
+            ],
+            "action": "Action(Mute)"
+        },
+        "KEY_VOLUMEDOWN": {
+            "seq": [
+                114
+            ],
+            "action": "Action(VolumeDown)"
+        },
+        "KEY_VOLUMEUP": {
+            "seq": [
+                115
+            ],
+            "action": "Action(VolumeUp)"
+        },
+        "KEY_PAUSE": {
+            "seq": [
+                119
+            ],
+            "action": "Action(Pause)"
+        },
+        "KEY_PROPS": {
+            "seq": [
+                130
+            ],
+            "action": "Action(Info)"
+        },
+        "KEY_BACK": {
+            "seq": [
+                158
+            ],
+            "action": "Action(Back)"
+        },
+        "KEY_NEXTSONG": {
+            "seq": [
+                163
+            ],
+            "action": "Action(SkipNext)"
+        },
+        "KEY_PREVIOUSSONG": {
+            "seq": [
+                165
+            ],
+            "action": "Action(SkipPrevious)"
+        },
+        "KEY_STOPCD": {
+            "seq": [
+                166
+            ],
+            "action": "Action(Stop)"
+        },
+        "KEY_RECORD": {
+            "seq": [
+                167
+            ],
+            "action": "Action(Record)"
+        },
+        "KEY_REWIND": {
+            "seq": [
+                168
+            ],
+            "action": "Action(Rewind)"
+        },
+        "KEY_PLAY": {
+            "seq": [
+                207
+            ],
+            "action": "Action(Play)"
+        },
+        "KEY_PROGRAM": {
+            "seq": [
+                362
+            ],
+            "action": "Action(Playlist)"
+        },
+        "KEY_FASTFORWARD": {
+            "seq": [
+                208
+            ],
+            "action": "Action(FastForward)"
+        },
+        "KEY_CHANNELUP": {
+            "seq": [
+                402
+            ],
+            "action": "Action(ChannelUp)"
+        },
+        "KEY_CHANNELDOWN": {
+            "seq": [
+                403
+            ],
+            "action": "Action(ChannelDown)"
+        }
+    }
+}
