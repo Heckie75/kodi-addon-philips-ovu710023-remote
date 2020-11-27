@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="script.service.philips-ovu710023-remote" name="Philips OVU710023 Remote Control"
-	version="1.0.0" provider-name="Heckie">
+<addon id="script.service.philips-ovu710023-remote" name="Philips OVU710023 Remote Control" version="1.0.1" provider-name="Heckie">
 	<requires>
 		<import addon="xbmc.python" version="2.25.0" />
 	</requires>
 	<extension point="xbmc.service" library="remote.py" start="login" />
 	<extension point="xbmc.addon.metadata">
-		<summary lang="en_gb">map keys for Philips OVU710023 Remote Control</summary>
+		<summary lang="en_gb">maps keys for Philips OVU710023 Remote Control</summary>
 		<description lang="en_gb"></description>
 		<disclaimer lang="en_gb"></disclaimer>
 		<language></language>
@@ -16,11 +15,5 @@
 		<website>https://github.com/Heckie75/kodi-addon-philips-ovu710023-remote
 		</website>
 		<email>github@heckie.de</email>
-		<source></source>
-		<news></news>
-		<assets>
-			<icon>icon.png</icon>
-			<screenshot>resources/assets/remote.png</screenshot>
-		</assets>
 	</extension>
 </addon>
