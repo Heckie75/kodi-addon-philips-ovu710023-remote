@@ -22,7 +22,7 @@ MODIFIER_KEYS = {
 
 __PLUGIN_ID__ = "script.service.philips-ovu710023-remote"
 settings = xbmcaddon.Addon(id=__PLUGIN_ID__)
-addon_dir = xbmc.translatePath(settings.getAddonInfo('path'))
+addon_dir = xbmc.translatePath(settings.getAddonInfo("path"))
 
 
 class Listener(xbmc.Monitor):
@@ -36,9 +36,6 @@ class Listener(xbmc.Monitor):
 
         xbmc.Monitor.__init__(self)
 
-        self._load_config()
-
-    def _load_config(self):
         data = open(os.path.join(addon_dir, "resources",
                                  "remote.json"), "r").read()
         self._config = json.loads(data)
@@ -47,28 +44,28 @@ class Listener(xbmc.Monitor):
 
         def _scan_inputs():
 
-            _current = set(filter(lambda e: e.startswith(
-                "event"), os.listdir("/dev/input")))
+            _inputs = {}
+            _current = set()
+            _name, _handler = None, None
+
+            data = open("/proc/bus/input/devices", "r")
+            for _line in data.readlines():
+                m = re.search(r"[NH]: (Name|Handlers)=(.+)", _line)
+                if m and m.group(1) == "Name":
+                    _name = m.group(2)[1:-1]
+                elif m and m.group(1) == "Handlers":
+                    m = re.search(r".*(event\d+).*", m.group(2))
+                    _handler = m.group(1) if m else None
+
+                if _name and _handler:
+                    _inputs[_name] = _handler
+                    _current.add(_handler)
+                    _name, _handler = None, None
+
             _new = _current - self._last_scan_inputs
             _old = self._last_scan_inputs - _current
             self._last_scan_inputs = _current
-            return _old, _new
-
-        def _evtest_find_devices():
-
-            p1 = subprocess.Popen(["echo", "-e", "\n"], stdout=subprocess.PIPE)
-            p2 = subprocess.Popen(["evtest"], stdin=p1.stdout,
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            p1.stdout.close()
-            out, err = p2.communicate()
-
-            devices = {}
-            for line in err.decode("utf-8").split("\n"):
-                m = re.search(r"(/dev/input/event[0-9]+):\s+(.+)", line)
-                if m:
-                    devices[m.group(2)] = m.group(1)
-
-            return devices
+            return _inputs, _old, _new
 
         def _has_listener(_i):
             for _l in self._listeners:
@@ -76,18 +73,17 @@ class Listener(xbmc.Monitor):
                     return True
             return False
 
-        old, new = _scan_inputs()
+        inputs, old, new = _scan_inputs()
 
         if len(old) > 0:
             listeners_to_shutdown = list(
-                filter(lambda _l: _l["path"].split("/")[-1] in old, self._listeners))
+                filter(lambda _l: _l["handler"] in old, self._listeners))
             self.shutdown(listeners_to_shutdown)
 
         if len(new) > 0:
-            _input_devices = _evtest_find_devices()
             for _input in self._config:
-                if _input in _input_devices and not _has_listener(_input):
-                    self._start(_input, _input_devices[_input])
+                if _input in inputs and not _has_listener(_input):
+                    self._start(_input, inputs[_input])
                     time.sleep(0.2)
 
     def shutdown(self, listeners_to_shutdown=_listeners):
@@ -98,14 +94,13 @@ class Listener(xbmc.Monitor):
             shutted_down_listeners.append(l)
 
         for k in shutted_down_listeners:
-            xbmc.log("remote %s" % k["path"], xbmc.LOGNOTICE)
             self._listeners.remove(k)
 
-    def _start(self, input_name, path):
+    def _start(self, input_name, handler):
 
         listener = {
             "name": input_name,
-            "path": path
+            "handler": handler
         }
 
         _l = threading.Thread(target=self._listen, args=(listener,))
@@ -113,7 +108,7 @@ class Listener(xbmc.Monitor):
         _l.start()
 
         xbmc.log("[Philips remote] start listener for %s at %s" %
-                 (listener["name"], listener["path"]), xbmc.LOGNOTICE)
+                 (listener["name"], listener["handler"]), xbmc.LOGNOTICE)
 
         self._listeners.append(listener)
 
@@ -135,12 +130,12 @@ class Listener(xbmc.Monitor):
             } if m else None
 
         proc = subprocess.Popen(
-            ["evtest", "--grab", listener["path"]], stdout=subprocess.PIPE)
+            ["evtest", "--grab", "/dev/input/%s" % listener["handler"]], stdout=subprocess.PIPE)
 
         listener["subprocess"] = proc
 
         xbmc.log("[Philips remote] listener for %s at %s starts listening..." %
-                 (listener["name"], listener["path"]), xbmc.LOGDEBUG)
+                 (listener["name"], listener["handler"]), xbmc.LOGDEBUG)
 
         sequence, modifiers = [], 0
         for line in iter(proc.stdout.readline, ""):
@@ -149,7 +144,7 @@ class Listener(xbmc.Monitor):
 
             if event:
                 xbmc.log("[Philips remote] incoming raw event at %s (%s): %s, %s" %
-                         (listener["name"], listener["path"], event["key_state"], event["key_code"]), xbmc.LOGDEBUG)
+                         (listener["name"], listener["handler"], event["key_state"], event["key_code"]), xbmc.LOGDEBUG)
 
                 if event["key_code"] in MODIFIER_KEYS:
                     if event["state"] == KEY_STATE_DOWN:
@@ -169,7 +164,7 @@ class Listener(xbmc.Monitor):
         proc.kill()
 
         xbmc.log("[Philips remote] listener for %s at %s shutted down" %
-                 (listener["name"], listener["path"]), xbmc.LOGNOTICE)
+                 (listener["name"], listener["handler"]), xbmc.LOGNOTICE)
 
     def _apply_sequence(self, sequence):
 
