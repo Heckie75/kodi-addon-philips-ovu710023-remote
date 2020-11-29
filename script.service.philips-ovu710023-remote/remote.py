@@ -30,7 +30,7 @@ class Listener(xbmc.Monitor):
     _config = None
     _listeners = []
     _last_action_ts = 0
-    _last_scan_inputs = set()
+    _prev_devices = set()
 
     def __init__(self):
 
@@ -42,10 +42,9 @@ class Listener(xbmc.Monitor):
 
     def refresh(self):
 
-        def _scan_inputs():
+        def _get_devices():
 
-            _inputs = {}
-            _current = set()
+            _devices = {}
             _name, _handler = None, None
 
             data = open("/proc/bus/input/devices", "r")
@@ -58,32 +57,31 @@ class Listener(xbmc.Monitor):
                     _handler = m.group(1) if m else None
 
                 if _name and _handler:
-                    _inputs[_name] = _handler
-                    _current.add(_handler)
+                    _devices[_name] = _handler
                     _name, _handler = None, None
 
-            _new = _current - self._last_scan_inputs
-            _old = self._last_scan_inputs - _current
-            self._last_scan_inputs = _current
-            return _inputs, _old, _new
+            return _devices
 
-        def _has_listener(_i):
-            for _l in self._listeners:
-                if _l["name"] == _i:
+        def _has_listener(name):
+            for listener in self._listeners:
+                if listener["name"] == name:
                     return True
             return False
 
-        inputs, old, new = _scan_inputs()
+        devices = _get_devices()
+        added_handlers = set(devices) - set(self._prev_devices)
+        removed_handlers = set(self._prev_devices) - set(devices)
+        self._prev_devices = devices
 
-        if len(old) > 0:
+        if len(removed_handlers) > 0:
             listeners_to_shutdown = list(
-                filter(lambda _l: _l["handler"] in old, self._listeners))
+                filter(lambda _l: _l["handler"] in removed_handlers, self._listeners))
             self.shutdown(listeners_to_shutdown)
 
-        if len(new) > 0:
-            for _input in self._config:
-                if _input in inputs and not _has_listener(_input):
-                    self._start(_input, inputs[_input])
+        if len(added_handlers) > 0:
+            for name in self._config:
+                if name in devices and not _has_listener(name):
+                    self._start(name, devices[name])
                     time.sleep(0.2)
 
     def shutdown(self, listeners_to_shutdown=_listeners):
@@ -96,10 +94,10 @@ class Listener(xbmc.Monitor):
         for k in shutted_down_listeners:
             self._listeners.remove(k)
 
-    def _start(self, input_name, handler):
+    def _start(self, name, handler):
 
         listener = {
-            "name": input_name,
+            "name": name,
             "handler": handler
         }
 
@@ -108,7 +106,7 @@ class Listener(xbmc.Monitor):
         _l.start()
 
         xbmc.log("[Philips remote] start listener for %s at %s" %
-                 (listener["name"], listener["handler"]), xbmc.LOGNOTICE)
+                 (name, handler), xbmc.LOGNOTICE)
 
         self._listeners.append(listener)
 
@@ -173,17 +171,17 @@ class Listener(xbmc.Monitor):
             if sequence == []:
                 return None, None
 
-            for known_inputs in self._config:
-                for definition in self._config[known_inputs]:
-                    if self._config[known_inputs][definition]["seq"] == sequence:
-                        return definition, self._config[known_inputs][definition]["action"]
+            for name in self._config:
+                for key in self._config[name]:
+                    if self._config[name][key]["seq"] == sequence:
+                        return key, self._config[name][key]["action"]
 
             return None, None
 
-        definition, action = _match_sequence(sequence)
-        if definition:
+        key, action = _match_sequence(sequence)
+        if key:
             xbmc.log("[Philips remote] found action: %s --> %s" %
-                     (definition, action), xbmc.LOGDEBUG)
+                     (key, action), xbmc.LOGDEBUG)
             if not self._turn_display_on():
                 xbmc.executebuiltin(action)
             return True
@@ -192,14 +190,14 @@ class Listener(xbmc.Monitor):
 
     def _turn_display_on(self):
 
-        current_time = time.time()
-        if self._last_action_ts + 299 > current_time:
+        now = time.time()
+        if self._last_action_ts + 299 > now:
             return False
 
         ps = subprocess.Popen(
             ["xset", "-q"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = ps.communicate()
-        self._last_action_ts = current_time
+        self._last_action_ts = now
         if not re.search("Monitor is On", stdout):
             xbmc.log("[Philips remote] turn monitor on", xbmc.LOGNOTICE)
             subprocess.call(["xset", "dpms", "force", "on"])
