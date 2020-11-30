@@ -32,6 +32,7 @@ class Listener(xbmc.Monitor):
     _listeners = []
     _last_action_ts = 0
     _prev_devices = set()
+    _evtest = None
 
     def __init__(self):
 
@@ -40,6 +41,17 @@ class Listener(xbmc.Monitor):
         data = open(os.path.join(addon_dir, "resources",
                                  "remote.json"), "r").read()
         self._config = json.loads(data)
+
+        if subprocess.call(["which", "evtest"]) == 0:
+            self._evtest = "evtest"
+        elif platform.machine().startswith("arm"):
+            self._evtest = os.path.join(addon_dir, "lib", "evtest_armhf")
+        elif platform.machine() == "x86_64":
+            self._evtest = os.path.join(addon_dir, "lib", "evtest_x86_64")
+        elif platform.machine() == "i386":
+            self._evtest = os.path.join(addon_dir, "lib", "evtest_i386")
+        else:
+            self._evtest = "echo"
 
     def refresh(self):
 
@@ -76,7 +88,7 @@ class Listener(xbmc.Monitor):
 
         if len(removed_handlers) > 0:
             listeners_to_shutdown = list(
-                filter(lambda _l: _l["handler"] in removed_handlers, self._listeners))
+                filter(lambda _l: _l["name"] in removed_handlers, self._listeners))
             self.shutdown(listeners_to_shutdown)
 
         if len(added_handlers) > 0:
@@ -93,6 +105,8 @@ class Listener(xbmc.Monitor):
             shutted_down_listeners.append(l)
 
         for k in shutted_down_listeners:
+            xbmc.log("[Philips remote] listener for %s at %s shutted down" %
+                     (k["name"], k["handler"]), xbmc.LOGNOTICE)
             self._listeners.remove(k)
 
     def _start(self, name, handler):
@@ -128,19 +142,8 @@ class Listener(xbmc.Monitor):
                 "key_code": m.group(2)
             } if m else None
 
-        def _get_evtest():
-
-            if platform.machine().startswith("arm"):
-                return os.path.join(addon_dir, "lib", "evtest_armhf")
-            elif platform.machine() == "x86_64":
-                return os.path.join(addon_dir, "lib", "evtest_x86_64")
-            elif platform.machine() == "i386":
-                return os.path.join(addon_dir, "lib", "evtest_i386")
-            else:
-                return "evtest"
-
         proc = subprocess.Popen(
-            [_get_evtest(), "--grab", "/dev/input/%s" % listener["handler"]], stdout=subprocess.PIPE)
+            [self._evtest, "--grab", "/dev/input/%s" % listener["handler"]], stdout=subprocess.PIPE)
 
         listener["subprocess"] = proc
 
@@ -169,12 +172,6 @@ class Listener(xbmc.Monitor):
 
                 if modifiers <= 0 and self._apply_sequence(sequence):
                     sequence, modifiers = [], 0
-
-        proc.stdout.close()
-        proc.kill()
-
-        xbmc.log("[Philips remote] listener for %s at %s shutted down" %
-                 (listener["name"], listener["handler"]), xbmc.LOGNOTICE)
 
     def _apply_sequence(self, sequence):
 
