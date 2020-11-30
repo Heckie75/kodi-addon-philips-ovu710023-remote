@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import re
 import threading
 import time
@@ -127,8 +128,19 @@ class Listener(xbmc.Monitor):
                 "key_code": m.group(2)
             } if m else None
 
+        def _get_evtest():
+
+            if platform.machine().startswith("arm"):
+                return os.path.join(addon_dir, "lib", "evtest_armhf")
+            elif platform.machine() == "x86_64":
+                return os.path.join(addon_dir, "lib", "evtest_x86_64")
+            elif platform.machine() == "i386":
+                return os.path.join(addon_dir, "lib", "evtest_i386")
+            else:
+                return "evtest"
+
         proc = subprocess.Popen(
-            ["evtest", "--grab", "/dev/input/%s" % listener["handler"]], stdout=subprocess.PIPE)
+            [_get_evtest(), "--grab", "/dev/input/%s" % listener["handler"]], stdout=subprocess.PIPE)
 
         listener["subprocess"] = proc
 

@@ -137,3 +137,7 @@ Nevertheless, there are 6 buttons that don't at all. I have tested this by using
 The following buttons don't work:
 * Teletext buttons: red, green, yellow, blue and ?-button
 * Windows MCE button: the green one with Windows logo inside
+
+## Disclaimer
+
+This addon utilizes and packages [evtest](https://cgit.freedesktop.org/evtest/) which is published under GNU licence. _evtest_ was written by Vojtech Pavlik <vojtech@suse.cz>.
