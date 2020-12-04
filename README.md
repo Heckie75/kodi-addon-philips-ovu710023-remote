@@ -1,7 +1,7 @@
 # kodi-addon-philips-ovu710023-remote
-Kodi addon in order to use ZOTAC Remote Control Kit (Philips OVU710023)
+Kodi addon in order to use ZOTAC Remote Control Kit (Philips OVU710023 or Philips OVU710000)
 
-This is a Kodi addon which allows usage of the Philips OVU710023 remote control. It is especially known as the Zotac Remote Control Kit, see [offer by Mindfactory](https://www.mindfactory.de/product_info.php/Zotac-Remote-Control-Kit-USB-IR-receiver_956848.html)
+This is a Kodi addon which allows usage of the Philips OVU710023 and Philips OVU710000 remote control. It is especially known as the Zotac Remote Control Kit, see [offer by Mindfactory](https://www.mindfactory.de/product_info.php/Zotac-Remote-Control-Kit-USB-IR-receiver_956848.html)
 
 This remote control does not work very well out of the box in Linux. It differs from other IR receivers because it emulates several input devices, i.e. a keyboard with media controls and power buttons. Some buttons work out of the box since they are simply mapped to standard keys. But there are several buttons that don't work. These are the numeric keys, asterisk key and hash key. Although the media control buttons, like _play_ or _pause_, work from scratch from operation system's point of view, I also mapped these to the commands that are expected in Kodi so that no additionally setup is required.
 
@@ -21,7 +21,7 @@ Bus 001 Device 015: ID 0471:2168 Philips (or NXP) OVU710023
 ...
 ```
 
-If you find a device with hardware ID ```0471:2168``` called _Philips (or NXP) OVU710023_ you are fine.
+If you find a device with hardware ID ```0471:2168``` called _Philips (or NXP) OVU710023_ or ```0471:0613``` called _Philips (or NXP) Infrared Transceiver_ you are fine.
 
 As mentioned this addon only works on Linux based systems. It uses command line tools which must be checked and - in some cases - installed first. 
 
@@ -52,7 +52,7 @@ $ # If current user is not in group 'input' as seen in this case then add user t
 $ sudo usermod -a -G input <your username>
 ```
 
-After you have checked ```evtest``` and permissions the output of ```evtest``` should look like this:
+After you have checked ```evtest``` and permissions the output of ```evtest``` should look like this if you have a _Philips (or NXP) OVU710023_:
 
 ```
 $ 
@@ -62,6 +62,18 @@ $
 /dev/input/event18:     PHILIPS OVU710023 System Control
 /dev/input/event19:     PHILIPS OVU710023 Consumer Control
 /dev/input/event20:     PHILIPS OVU710023 Mouse
+...
+Select the device event number [0-23]: 
+```
+
+or like this if you have a _Philips (or NXP) Infrared Transceiver_
+```
+$ 
+/dev/input/event5:      Video Bus
+# ...
+/dev/input/event16:     PHILIPS MCE USB IR Receiver- Spinel plus Keyboard
+/dev/input/event17:     PHILIPS MCE USB IR Receiver- Spinel plus System Control
+/dev/input/event18:     PHILIPS MCE USB IR Receiver- Spinel plus Consumer Control
 ...
 Select the device event number [0-23]: 
 ```
