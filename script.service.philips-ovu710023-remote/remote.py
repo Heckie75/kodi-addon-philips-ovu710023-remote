@@ -7,6 +7,7 @@ import time
 import subprocess
 import xbmc
 import xbmcaddon
+import xbmcvfs
 
 KEY_STATE_UP = 0
 KEY_STATE_DOWN = 1
@@ -23,7 +24,7 @@ MODIFIER_KEYS = {
 
 __PLUGIN_ID__ = "script.service.philips-ovu710023-remote"
 settings = xbmcaddon.Addon(id=__PLUGIN_ID__)
-addon_dir = xbmc.translatePath(settings.getAddonInfo("path"))
+addon_dir = xbmcvfs.translatePath(settings.getAddonInfo("path"))
 
 
 class Listener(xbmc.Monitor):
@@ -106,7 +107,7 @@ class Listener(xbmc.Monitor):
 
         for k in shutted_down_listeners:
             xbmc.log("[Philips remote] listener for %s at %s shutted down" %
-                     (k["name"], k["handler"]), xbmc.LOGNOTICE)
+                     (k["name"], k["handler"]), xbmc.LOGINFO)
             self._listeners.remove(k)
 
     def _start(self, name, handler):
@@ -121,7 +122,7 @@ class Listener(xbmc.Monitor):
         _l.start()
 
         xbmc.log("[Philips remote] start listener for %s at %s" %
-                 (name, handler), xbmc.LOGNOTICE)
+                 (name, handler), xbmc.LOGINFO)
 
         self._listeners.append(listener)
 
@@ -153,7 +154,7 @@ class Listener(xbmc.Monitor):
         sequence, modifiers = [], 0
         for line in iter(proc.stdout.readline, ""):
 
-            event = _parse_event(line)
+            event = _parse_event(line.decode('UTF-8'))
 
             if event:
                 xbmc.log("[Philips remote] incoming raw event at %s (%s): %s, %s" %
@@ -207,8 +208,8 @@ class Listener(xbmc.Monitor):
             ["xset", "-q"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = ps.communicate()
         self._last_action_ts = now
-        if not re.search("Monitor is On", stdout):
-            xbmc.log("[Philips remote] turn monitor on", xbmc.LOGNOTICE)
+        if not re.search("Monitor is On", stdout.decode('UTF-8')):
+            xbmc.log("[Philips remote] turn monitor on", xbmc.LOGINFO)
             subprocess.call(["xset", "dpms", "force", "on"])
             return True
         else:
@@ -217,7 +218,7 @@ class Listener(xbmc.Monitor):
 
 if __name__ == "__main__":
 
-    xbmc.log("[Philips remote] Service is starting", xbmc.LOGNOTICE)
+    xbmc.log("[Philips remote] Service is starting", xbmc.LOGINFO)
     listener = Listener()
 
     while not listener.abortRequested():
@@ -226,6 +227,6 @@ if __name__ == "__main__":
         if listener.waitForAbort(10):
             pass
 
-    xbmc.log("[Philips remote] stopping service", xbmc.LOGNOTICE)
+    xbmc.log("[Philips remote] stopping service", xbmc.LOGINFO)
     listener.shutdown()
-    xbmc.log("[Philips remote] Service stopped.", xbmc.LOGNOTICE)
+    xbmc.log("[Philips remote] Service stopped.", xbmc.LOGINFO)
