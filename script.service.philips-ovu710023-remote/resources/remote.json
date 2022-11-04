@@ -319,7 +319,7 @@
         },
         "KEY_6": {
             "seq": [
-               7
+                7
             ],
             "action": "Action(Number6)"
         },
@@ -467,5 +467,13 @@
             ],
             "action": "Action(ChannelDown)"
         }
-    }    
+    },
+    ".+ \\(AVRCP\\)": {
+        "KEY_STOPCD": {
+            "seq": [
+                201
+            ],
+            "action": "Action(Stop)"
+        }
+    }
 }

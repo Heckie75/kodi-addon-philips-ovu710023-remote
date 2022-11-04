@@ -2,9 +2,10 @@ import json
 import os
 import platform
 import re
+import subprocess
 import threading
 import time
-import subprocess
+
 import xbmc
 import xbmcaddon
 import xbmcvfs
@@ -82,6 +83,14 @@ class Listener(xbmc.Monitor):
                     return True
             return False
 
+        def _match_config(name: str) -> bool:
+
+            for pattern in self._config:
+                if re.match(pattern, name):
+                    return True
+
+            return False
+
         devices = _get_devices()
         added_handlers = set(devices) - set(self._prev_devices)
         removed_handlers = set(self._prev_devices) - set(devices)
@@ -93,9 +102,9 @@ class Listener(xbmc.Monitor):
             self.shutdown(listeners_to_shutdown)
 
         if len(added_handlers) > 0:
-            for name in self._config:
-                if name in devices and not _has_listener(name):
-                    self._start(name, devices[name])
+            for key in devices:
+                if _match_config(key) and not _has_listener(key):
+                    self._start(key, devices[key])
                     time.sleep(0.2)
 
     def shutdown(self, listeners_to_shutdown=_listeners):
